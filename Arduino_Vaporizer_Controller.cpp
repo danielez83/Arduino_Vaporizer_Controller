@@ -2,24 +2,21 @@
 // 24-08-2019 Saved as a GiT repository
 
 #include <Arduino.h>
+#include "metering_valve.h"
+#include "relay_board.h"
+#include "SoftwareSerial.h" // by Paul Stoffregen (https://github.com/PaulStoffregen/SoftwareSerial)
 
 
 // ARDUINO PIN CONFIGURATION --------------------------------
-// Stepper motor pins
-const int  STEP_PIN1 = 8;
-const int  STEP_PIN2 = 9;
-const int  STEP_PIN3 = 10;
-const int  STEP_PIN4 = 11;
-
 // Potentiometer wiper set to ADC A0
 
 
 // CONSTANTS -------------------------------------------------
-const int Mot_OFF = 99; // Turn off stepper motor
-const int Mot_REV = 98; // Reverse stepper motor revolution
+
 
 // GLOBAL VARIABLES -------------------------------------------
-int ADC_val = 0;  // variable to store the value read
+int ADC_val0 = 0;  // variable to store the potentiometer value
+int ADC_val1 = 0;  // variable to store the LM735 value
 
 int CMD_Val; // Command Numerical value
 
@@ -40,43 +37,37 @@ bool motor_flag = 0; // flag for activating motor control
 // 0x01 LSB ADC_val
 // 0x02	Digital Output (relay board) status --> copy of digital_out_status register
 
-void Output_state( int i4,int i3,int i2,int i1)
-{
-  if (i1==1) digitalWrite(STEP_PIN1,HIGH); else digitalWrite(STEP_PIN1,LOW);
-  if (i2==1) digitalWrite(STEP_PIN2,HIGH); else digitalWrite(STEP_PIN2,LOW);
-  if (i3==1) digitalWrite(STEP_PIN3,HIGH); else digitalWrite(STEP_PIN3,LOW);
-  if (i4==1) digitalWrite(STEP_PIN4,HIGH); else digitalWrite(STEP_PIN4,LOW);
-}
+// Software Serial for RS-485 Communication
+SoftwareSerial PIDRS485(12, 13);
 
-void Step(int state)
-{
-int i1,i2,i3,i4;
-
-  switch (state)
-    {
-       case 0: Output_state(0,0,0,1); break;
-       case 1: Output_state(0,0,1,1); break;
-       case 2: Output_state(0,0,1,0); break;
-       case 3: Output_state(0,1,1,0); break;
-       case 4: Output_state(0,1,0,0); break;
-       case 5: Output_state(1,1,0,0); break;
-       case 6: Output_state(1,0,0,0); break;
-       case 7: Output_state(1,0,0,1); break;
-       case Mot_OFF: //OFF
-          Output_state(0,0,0,0); break;
-    }
-   delay(1);
-}
-
+// ARDUINO SETUP
 void setup() {
     // Digital Pins setup
+	// Stepper motor **********
     pinMode(STEP_PIN1, OUTPUT);
     pinMode(STEP_PIN2, OUTPUT);
     pinMode(STEP_PIN3, OUTPUT);
     pinMode(STEP_PIN4, OUTPUT);
+    // Relays *****************
+    pinMode(RELAY_PIN1, OUTPUT);
+    pinMode(RELAY_PIN2, OUTPUT);
+    pinMode(RELAY_PIN3, OUTPUT);
+    pinMode(RELAY_PIN4, OUTPUT);
 
-    // Serial port setup
+    // Default serial port for PC communication setup
     Serial.begin(9600);
+
+    // Set data rate for SoftwareSerial port (PIDRS485) compatible with standard
+    // Arduino "SERIAL_8N1 (the default)"
+    //
+    // Configure OMEGA PID 7833 communication as follows:
+    // CoSH: ON
+    // C-SL: ASCII
+    // C-no: 1
+    // LEn: 8
+    // PrtY: none
+    // StoP: 1
+    PIDRS485.begin(9600);
 }
 
 void loop() {
@@ -95,12 +86,17 @@ void loop() {
 	if (inString.length()> 0) {
 		char CMD = inString.charAt(0);
 		switch (CMD) {
-			case 'A': // Read ADC
-			      ADC_val = analogRead(A0);
-			      Serial.print("ADC Value: ");
-			      Serial.println(ADC_val);
+			case 'A': // Read Potentiometer ADC ************************************
+			      ADC_val0 = analogRead(A0);
+			      Serial.print("Pot ADC Value: ");
+			      Serial.println(ADC_val0);
 				break;
-			case 'M': // Metering Valve Motor Control
+			case 'L': // Read LM35 temperrature with ADC ************************************
+			      ADC_val1 = analogRead(A1);
+			      Serial.print("LM35 ADC Value: ");
+			      Serial.println(ADC_val1);
+				break;
+			case 'M': // Metering Valve Motor Control ************************************
 				inString.setCharAt(0, '0');
 				SV_Metering_Valve = inString.toInt();
 				// Check ADC boundaries
@@ -112,7 +108,7 @@ void loop() {
 					SV_Metering_Valve = analogRead(A0); // Get current ADC value
 				}
 				break;
-			case 'S': // Solenoid Valve Control
+			case 'S': // Solenoid Valve Control ************************************
 				inString.setCharAt(0, '0');
 				digital_out_status = inString.toInt();
 						if (digital_out_status <= 15 && digital_out_status >= 0){
