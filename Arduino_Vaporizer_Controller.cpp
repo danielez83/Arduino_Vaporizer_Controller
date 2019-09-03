@@ -115,6 +115,9 @@ void loop() {
 							Serial.println(digital_out_status);
 						}
 				break;
+			case 'X': // Motor Stopped ************************************
+				Serial.println("Motor Valve Stopped...");
+				break;
 			default:
 				Serial.println("Command not recognized");
 				break;
@@ -128,23 +131,10 @@ void loop() {
 	if (motor_flag){
 		motor_flag = 0; // Reset flag
 		CV_Metering_Valve = analogRead(A0); // Get current ADC value
-		if (SV_Metering_Valve > CV_Metering_Valve){
-			// CW motor turn
-			while (CV_Metering_Valve < SV_Metering_Valve){
-				for(int i = 7; i>-1; i--)
-				{
-					Step(i);
-					if (SV_Metering_Valve - CV_Metering_Valve <5){
-						delay(10);
-					}
-				}
-				CV_Metering_Valve = analogRead(A0); // Get current ADC value
-			}
-		}
 		if (SV_Metering_Valve < CV_Metering_Valve){
-			// CCW motor turn
+			// CW motor turn
 			while (CV_Metering_Valve > SV_Metering_Valve){
-				for(int i = 0; i<8; i++)
+				for(int i = 7; i>-1; i--)
 				{
 					Step(i);
 					if (CV_Metering_Valve - SV_Metering_Valve <5){
@@ -152,6 +142,48 @@ void loop() {
 					}
 				}
 				CV_Metering_Valve = analogRead(A0); // Get current ADC value
+
+				while (Serial.available()) { // STOP TURNING COMMAND!
+				if (Serial.available() >0) {
+					char c = Serial.read();
+					inString += c; // Read data
+					}
+				}
+				if (inString.length()> 0) {
+						char CMD = inString.charAt(0);
+						if (CMD=='X'){
+							Step(Mot_OFF);
+							break;
+						}
+						}
+
+			}
+		}
+		if (SV_Metering_Valve > CV_Metering_Valve){
+			// CCW motor turn
+			while (CV_Metering_Valve < SV_Metering_Valve){
+				for(int i = 0; i<8; i++)
+				{
+					Step(i);
+					if (SV_Metering_Valve - CV_Metering_Valve <5){
+						delay(10);
+					}
+				}
+				CV_Metering_Valve = analogRead(A0); // Get current ADC value
+
+				while (Serial.available()) { // STOP TURNING COMMAND!
+				if (Serial.available() >0) {
+					char c = Serial.read();
+					inString += c; // Read data
+					}
+				}
+				if (inString.length()> 0) {
+						char CMD = inString.charAt(0);
+						if (CMD=='X'){
+							Step(Mot_OFF);
+							break;
+						}
+						}
 			}
 		}
 		Serial.println("*");
