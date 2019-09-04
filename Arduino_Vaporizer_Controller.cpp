@@ -8,7 +8,14 @@
 
 
 // ARDUINO PIN CONFIGURATION --------------------------------
-// Potentiometer wiper set to ADC A0
+// Potentiometer wiper --> set to ADC A0
+// IN1 ULN2003AN board  --> set to DIGITAL D8
+// IN2 ULN2003AN board  --> set to DIGITAL D9
+// IN3 ULN2003AN board  --> set to DIGITAL D10
+// IN4 ULN2003AN board  --> set to DIGITAL D11
+
+// RS485_to_RS232_MCU tx  --> set to DIGITAL D12 (SoftwareSerial TX)
+// RS485_to_RS232_MCU rx  --> set to DIGITAL D13 (SoftwareSerial TX)
 
 
 // CONSTANTS -------------------------------------------------
@@ -25,11 +32,19 @@ int CV_Metering_Valve; // Current Value (ADC Value) of Metering valve (0-1023)
 
 byte digital_out_status; // Digital output (relay board) register
 
+unsigned int timeout_counter = 20000; // Simple variable counter for monitoring timeout during communication
+unsigned int PID_PV, PID_SV, PID_STATUS; // PID variables
+
+unsigned int i, counter; // useful indexes for cycles and counters
+
 // GLOBAL STRINGS -------------------------------------------
 String inString = ""; // for incoming serial string data
 
 // GLOBAL FLAGS
 bool motor_flag = 0; // flag for activating motor control
+
+// FUNCTIONS ------------------------------------------------
+char convertCharToHex(char ch);
 
 
 // EEPROM MEMORY ADDRESSES
@@ -38,7 +53,7 @@ bool motor_flag = 0; // flag for activating motor control
 // 0x02	Digital Output (relay board) status --> copy of digital_out_status register
 
 // Software Serial for RS-485 Communication
-SoftwareSerial PIDRS485(12, 13);
+SoftwareSerial PIDRS485(12, 13); // rx, tx
 
 // ARDUINO SETUP
 void setup() {
@@ -118,6 +133,77 @@ void loop() {
 			case 'X': // Motor Stopped ************************************
 				Serial.println("Motor Valve Stopped...");
 				break;
+			case 'Y': // read PID SV
+				PIDRS485.flush(); // flush read register
+				PIDRS485.println(":010310010001EA");
+				inString = "                "; // prepare an empty string
+				delay(50);
+				i = 0;
+				while (PIDRS485.available()>0){ // read RS485 input string
+						inString.setCharAt(i, PIDRS485.read());
+						i++;
+						}
+				inString.trim(); // remove white spaces
+				// calculate SV, i.e. elements [8,9,10]
+				if (i==0){
+					Serial.println("PID connection timeout");
+					}
+				else {
+					PID_SV = convertCharToHex(inString.charAt(8))*256+convertCharToHex(inString.charAt(9))*16+convertCharToHex(inString.charAt(10));
+					Serial.print("SV: ");
+					Serial.println(PID_SV);
+					}
+				break;
+			case 'U': // read PID PV
+				PIDRS485.flush(); // flush read register
+				PIDRS485.println(":010310000001EB");
+				inString = "                "; // prepare an empty string
+				delay(50);
+				i = 0;
+				while (PIDRS485.available()>0){ // read RS485 input string
+						inString.setCharAt(i, PIDRS485.read());
+						i++;
+						}
+				inString.trim(); // remove white spaces
+				// calculate SV, i.e. elements [8,9,10]
+				if (i==0){
+					Serial.println("PID connection timeout");
+					}
+				else {
+					PID_PV = convertCharToHex(inString.charAt(8))*(256)+convertCharToHex(inString.charAt(9))*16+convertCharToHex(inString.charAt(10));
+					Serial.print("PV: ");
+					Serial.println(PID_PV);
+					}
+				break;
+			case 'I': // read PID status (ON/OFF)
+				PIDRS485.flush(); // flush read register
+				PIDRS485.println(":010208140001E0");
+				inString = "                "; // prepare an empty string
+				delay(50);
+				i = 0;
+				while (PIDRS485.available()>0){ // read RS485 input string
+						inString.setCharAt(i, PIDRS485.read());
+						i++;
+						}
+				inString.trim(); // remove white spaces
+				if (i==0){
+					Serial.println("PID connection timeout");
+					}
+				else {
+					if(inString.charAt(8)=='1'){
+						Serial.println("PID ON");
+						}
+					else {
+						Serial.println("PID OFF");
+						}
+					}
+				break;
+			case 'O': // PID ON
+				PIDRS485.println(":01050814FF00DF");
+				break;
+			case 'P': // PID OFF
+				PIDRS485.println(":010508140000DE");
+				break;
 			default:
 				Serial.println("Command not recognized");
 				break;
@@ -188,4 +274,69 @@ void loop() {
 		}
 		Serial.println("*");
 	}
+}
+
+
+char convertCharToHex(char ch)
+/*
+https://arduino.stackexchange.com/questions/39861/how-to-convert-an-hex-string-to-an-array-of-bytes
+goddland_16 answer
+ */
+{
+  char returnType;
+  switch(ch)
+  {
+    case '0':
+    returnType = 0;
+    break;
+    case  '1' :
+    returnType = 1;
+    break;
+    case  '2':
+    returnType = 2;
+    break;
+    case  '3':
+    returnType = 3;
+    break;
+    case  '4' :
+    returnType = 4;
+    break;
+    case  '5':
+    returnType = 5;
+    break;
+    case  '6':
+    returnType = 6;
+    break;
+    case  '7':
+    returnType = 7;
+    break;
+    case  '8':
+    returnType = 8;
+    break;
+    case  '9':
+    returnType = 9;
+    break;
+    case  'A':
+    returnType = 10;
+    break;
+    case  'B':
+    returnType = 11;
+    break;
+    case  'C':
+    returnType = 12;
+    break;
+    case  'D':
+    returnType = 13;
+    break;
+    case  'E':
+    returnType = 14;
+    break;
+    case  'F' :
+    returnType = 15;
+    break;
+    default:
+    returnType = 0;
+    break;
+  }
+  return returnType;
 }
