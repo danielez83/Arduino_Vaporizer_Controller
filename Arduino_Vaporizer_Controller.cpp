@@ -204,6 +204,9 @@ void loop() {
 			case 'P': // PID OFF
 				PIDRS485.println(":010508140000DE");
 				break;
+			case 'Q': // Vaporizer Query
+				Serial.println("*"); //Just prompt a "*" to say that vaporizer is connected
+				break;
 			default:
 				Serial.println("Command not recognized");
 				break;
