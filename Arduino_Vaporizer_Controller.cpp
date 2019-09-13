@@ -37,7 +37,11 @@ unsigned int PID_PV, PID_SV, PID_STATUS; // PID variables
 
 unsigned int i, counter; // useful indexes for cycles and counters
 
+unsigned long timeout_value = 30; // timeout_value in ms
+unsigned long time; // Value for storing internal time
+
 // GLOBAL STRINGS -------------------------------------------
+char c; // incoming serial characters
 String inString = ""; // for incoming serial string data
 
 // GLOBAL FLAGS
@@ -71,6 +75,7 @@ void setup() {
 
     // Default serial port for PC communication setup
     Serial.begin(9600);
+    //Serial.setTimeout(200);
 
     // Set data rate for SoftwareSerial port (PIDRS485) compatible with standard
     // Arduino "SERIAL_8N1 (the default)"
@@ -90,13 +95,22 @@ void loop() {
 	int state, prescaler;
 
 	// Check for new data from serial port --------------------------------------------------------
+	time = millis(); // get current timestamp
 	while (Serial.available()) {
-	delay(10);
+	delay(2);
 	if (Serial.available() >0) {
 		char c = Serial.read();
 		inString += c; // Read data
 		}
+
+	if (millis() - time > timeout_value){ // Max time
+		inString = "";
+		Serial.println("Communication timeout...");
+		Serial.println(millis() - time);
+		break;
+		}
 	}
+
 	// Check command from serial port --------------------------------------------------------
 	if (inString.length()> 0) {
 		char CMD = inString.charAt(0);
