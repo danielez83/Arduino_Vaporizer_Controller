@@ -97,7 +97,7 @@ void loop() {
 	// Check for new data from serial port --------------------------------------------------------
 	time = millis(); // get current timestamp
 	while (Serial.available()) {
-	delay(2);
+	delay(5);
 	if (Serial.available() >0) {
 		char c = Serial.read();
 		inString += c; // Read data
