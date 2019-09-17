@@ -2,20 +2,29 @@
 // 24-08-2019 Saved as a GiT repository
 
 #include <Arduino.h>
+#include "EEPROM.h"
 #include "metering_valve.h"
 #include "relay_board.h"
 #include "SoftwareSerial.h" // by Paul Stoffregen (https://github.com/PaulStoffregen/SoftwareSerial)
 
 
 // ARDUINO PIN CONFIGURATION --------------------------------
+
 // Potentiometer wiper --> set to ADC A0
+// LM35 --> set to ADC A1
+// RS232 to USB TX --> Arduino RX D0
+// RS232 to USB RX --> Arduino TX D1
+// Relay 1 board  --> DIGITAL D2
+// Relay 2 board  --> DIGITAL D3
+// Relay 3 board  --> DIGITAL D4
+// Relay 4 board  --> DIGITAL D5
 // IN1 ULN2003AN board  --> set to DIGITAL D8
 // IN2 ULN2003AN board  --> set to DIGITAL D9
 // IN3 ULN2003AN board  --> set to DIGITAL D10
 // IN4 ULN2003AN board  --> set to DIGITAL D11
 
 // RS485_to_RS232_MCU tx  --> set to DIGITAL D12 (SoftwareSerial TX)
-// RS485_to_RS232_MCU rx  --> set to DIGITAL D13 (SoftwareSerial TX)
+// RS485_to_RS232_MCU rx  --> set to DIGITAL D13 (SoftwareSerial RX)
 
 
 // CONSTANTS -------------------------------------------------
@@ -24,6 +33,8 @@
 // GLOBAL VARIABLES -------------------------------------------
 int ADC_val0 = 0;  // variable to store the potentiometer value
 int ADC_val1 = 0;  // variable to store the LM735 value
+
+int Relay_addr = 0;
 
 int CMD_Val; // Command Numerical value
 
@@ -139,10 +150,20 @@ void loop() {
 				break;
 			case 'S': // Solenoid Valve Control ************************************
 				inString.setCharAt(0, '0');
-				digital_out_status = inString.toInt();
-						if (digital_out_status <= 15 && digital_out_status >= 0){
-							Serial.println(digital_out_status);
-						}
+				// ? Don't remove this comment
+				if (inString.length() < 4){
+					digital_out_status = EEPROM.read(Relay_addr);
+					delay(10);
+					Serial.println(digital_out_status);
+				}
+				else{
+					digital_out_status = inString.toInt();
+					if (digital_out_status <= 15 && digital_out_status >= 0){
+						EEPROM.update(Relay_addr, digital_out_status);
+						delay(10);
+					}
+				}
+
 				break;
 			case 'X': // Motor Stopped ************************************
 				Serial.println("Motor Valve Stopped...");
