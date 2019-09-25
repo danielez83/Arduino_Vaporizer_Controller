@@ -99,6 +99,19 @@ void setup() {
     // PrtY: none
     // StoP: 1
     PIDRS485.begin(9600);
+
+    // Set relays status ***********************************
+    digital_out_status = EEPROM.read(Relay_addr);
+	delay(10);
+	// bitshift for accessing D2 to D5
+	digital_out_status = digital_out_status << 2;
+	// clear all output bit except D0 and D1
+	PORTD &= ~(1 << 2); // RELAY_PIN1 --> D2 --> PORTD2
+	PORTD &= ~(1 << 3); // RELAY_PIN2 --> D3 --> PORTD4
+	PORTD &= ~(1 << 4); // RELAY_PIN3 --> D4 --> PORTD4
+	PORTD &= ~(1 << 5); // RELAY_PIN4 --> D5 --> PORTD5
+	PORTD |= digital_out_status;
+	// *****************************************************
 }
 
 void loop() {
@@ -161,6 +174,15 @@ void loop() {
 					if (digital_out_status <= 15 && digital_out_status >= 0){
 						EEPROM.update(Relay_addr, digital_out_status);
 						delay(10);
+						// bitshift for accessing D2 to D5
+						digital_out_status = digital_out_status << 2;
+						// clear all output bit except D0 and D1
+						PORTD &= ~(1 << 2); // RELAY_PIN1 --> D2 --> PORTD2
+						PORTD &= ~(1 << 3); // RELAY_PIN2 --> D3 --> PORTD4
+						PORTD &= ~(1 << 4); // RELAY_PIN3 --> D4 --> PORTD4
+						PORTD &= ~(1 << 5); // RELAY_PIN4 --> D5 --> PORTD5
+						PORTD |= digital_out_status;
+						Serial.println(digital_out_status >> 2);
 					}
 				}
 
