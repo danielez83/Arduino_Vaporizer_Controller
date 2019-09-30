@@ -1,10 +1,10 @@
 /*
- * Functions and constants declaration for motorized metering valve
- * Valve: Swagelok SS-SS2 (1/8 in.)
+ * Version 1.0, 2 set 2019
+ * Author: Daniele Zannoni
+ * Description: Functions and constants declaration for motorized
+ * metering valve (Swagelok SS-SS2, 1/8 in.)
  * Motor: 28byj-48
  * Driver: ULN2003AN
- * Created on: 2 set 2019
- * Author: Daniele Z.
  */
 
 #ifndef METERING_VALVE_H_

@@ -1,5 +1,75 @@
-// ChangeLog
-// 24-08-2019 Saved as a GiT repository
+/*
+ *  Version 1.0, 30 set 2019
+ *  Author: Daniele Zannoni
+ *  Description: Arduino firmaware for water vaporizer control.
+ *
+ *  ChangeLog
+ *  30-09-2019 First full operating version of Arduino firmware
+ *  02-09-2019 Started assembling libraries
+ *  24-08-2019 Saved as a GiT repository
+ */
+
+/*
+ * ------------------- ARDUINO PIN CONFIGURATION ------------------
+ *
+ * Potentiometer wiper --> set to ADC A0
+ * LM35 --> set to ADC A1
+ * RS232 to USB TX --> Arduino RX D0
+ * RS232 to USB RX --> Arduino TX D1
+ * Relay 1 board  --> DIGITAL D2
+ * Relay 2 board  --> DIGITAL D3
+ * Relay 3 board  --> DIGITAL D4
+ * Relay 4 board  --> DIGITAL D5
+ * IN1 ULN2003AN board  --> set to DIGITAL D8
+ * IN2 ULN2003AN board  --> set to DIGITAL D9
+ * IN3 ULN2003AN board  --> set to DIGITAL D10
+ * IN4 ULN2003AN board  --> set to DIGITAL D11
+ *
+ * RS485_to_RS232_MCU tx  --> set to DIGITAL D12 (SoftwareSerial TX)
+ * RS485_to_RS232_MCU rx  --> set to DIGITAL D13 (SoftwareSerial RX)
+ * ----------------- END OF ARDUINO PIN CONFIGURATION ----------------
+ *
+ * --------------------- EEPROM MEMORY ADDRESSES ---------------------
+ * 0x00 MSB ADC_val
+ * 0x01 LSB ADC_val
+ * 0x02	Digital Output (relay board) status --> copy of digital_out_status register
+ * ----------------- END OF EEPROM MEMORY ADDRESSES ------------------
+ *
+ * ----------- RS232 Serial Configuration (Arduino Standard) ---------
+ * Baud rate: 9600
+ * 8 bit
+ * 1 stop bit
+ * -------------- END OF RS232 Serial Configuration  ------------------
+ *
+ * ------------ RS485 Serial Configuration (Software Serial) ---------
+ * Arduino "SERIAL_8N1 (the default)"
+ * Configure OMEGA PID 7833 communication as follows:
+ * CoSH: ON
+ * C-SL: ASCII
+ * C-no: 1
+ * LEn: 8
+ * PrtY: none
+ * StoP: 1
+ * -------------- END OF RS485 Serial Configuration  ------------------
+ *
+ * -------------------------- COMMAND LIST ----------------------------
+ * (each command followed by '\r\n'
+ * A 		ADC Read of potentiometer (metering valve position)
+ * L 		ADC Read of LM35 value
+ * Mxxx  	Set value of metering valve 0 - 999 (~0-99.9%), e.g. M562 = valve at 56.2%
+ * Sxx		Set relay status 0 - 15 (use binary notation):
+ * 			relay1 = 1, relay2 = 2, relay3 = 4, relay4 = 8,
+ * 			e.g. relay1 and relay3 'S5'
+ * 			e.g. relay2, relay3, relay4 'S14'
+ * S		Read relay status
+ * X		Stop turning metering valve (to be sent after an 'M' command
+ * Y		Read PID SV
+ * U		Read PID PV
+ * I		Read PID status (ON/OFF)
+ * O		Set PID ON
+ * P		Set PID OFF
+ * Q		Check connection, response is '*'
+*/
 
 #include <Arduino.h>
 #include "EEPROM.h"
@@ -7,28 +77,7 @@
 #include "relay_board.h"
 #include "SoftwareSerial.h" // by Paul Stoffregen (https://github.com/PaulStoffregen/SoftwareSerial)
 
-
-// ARDUINO PIN CONFIGURATION --------------------------------
-
-// Potentiometer wiper --> set to ADC A0
-// LM35 --> set to ADC A1
-// RS232 to USB TX --> Arduino RX D0
-// RS232 to USB RX --> Arduino TX D1
-// Relay 1 board  --> DIGITAL D2
-// Relay 2 board  --> DIGITAL D3
-// Relay 3 board  --> DIGITAL D4
-// Relay 4 board  --> DIGITAL D5
-// IN1 ULN2003AN board  --> set to DIGITAL D8
-// IN2 ULN2003AN board  --> set to DIGITAL D9
-// IN3 ULN2003AN board  --> set to DIGITAL D10
-// IN4 ULN2003AN board  --> set to DIGITAL D11
-
-// RS485_to_RS232_MCU tx  --> set to DIGITAL D12 (SoftwareSerial TX)
-// RS485_to_RS232_MCU rx  --> set to DIGITAL D13 (SoftwareSerial RX)
-
-
 // CONSTANTS -------------------------------------------------
-
 
 // GLOBAL VARIABLES -------------------------------------------
 int ADC_val0 = 0;  // variable to store the potentiometer value
@@ -43,7 +92,7 @@ int CV_Metering_Valve; // Current Value (ADC Value) of Metering valve (0-1023)
 
 byte digital_out_status; // Digital output (relay board) register
 
-unsigned int timeout_counter = 20000; // Simple variable counter for monitoring timeout during communication
+unsigned int timeout_counter = 80000; // Simple variable counter for monitoring timeout during communication
 unsigned int PID_PV, PID_SV, PID_STATUS; // PID variables
 
 unsigned int i, counter; // useful indexes for cycles and counters
@@ -60,12 +109,6 @@ bool motor_flag = 0; // flag for activating motor control
 
 // FUNCTIONS ------------------------------------------------
 char convertCharToHex(char ch);
-
-
-// EEPROM MEMORY ADDRESSES
-// 0x00 MSB ADC_val
-// 0x01 LSB ADC_val
-// 0x02	Digital Output (relay board) status --> copy of digital_out_status register
 
 // Software Serial for RS-485 Communication
 SoftwareSerial PIDRS485(12, 13); // rx, tx
@@ -86,18 +129,8 @@ void setup() {
 
     // Default serial port for PC communication setup
     Serial.begin(9600);
-    //Serial.setTimeout(200);
 
-    // Set data rate for SoftwareSerial port (PIDRS485) compatible with standard
-    // Arduino "SERIAL_8N1 (the default)"
-    //
-    // Configure OMEGA PID 7833 communication as follows:
-    // CoSH: ON
-    // C-SL: ASCII
-    // C-no: 1
-    // LEn: 8
-    // PrtY: none
-    // StoP: 1
+    // Set data rate for SoftwareSerial port (PIDRS485) compatible with MODBUS ASCII
     PIDRS485.begin(9600);
 
     // Set relays status ***********************************
