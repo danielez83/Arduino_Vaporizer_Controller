@@ -98,7 +98,7 @@ unsigned int PID_PV, PID_SV, PID_STATUS; // PID variables
 
 unsigned int i, counter; // useful indexes for cycles and counters
 
-unsigned long timeout_value = 30; // timeout_value in ms
+unsigned long timeout_value = 50; // timeout_value in ms
 unsigned long time; // Value for storing internal time
 
 // GLOBAL STRINGS -------------------------------------------
@@ -155,7 +155,7 @@ void setup() {
 	// *****************************************************
 
 	// Beep ONCE
-	fast_beep();
+	//fast_beep();
 }
 
 void loop() {
@@ -310,7 +310,7 @@ void loop() {
 				PIDRS485.println(":010508140000DE");
 				break;
 			case 'Q': // Vaporizer Query
-				fast_beep();
+				//fast_beep();
 				Serial.println("*"); //Just prompt a "*" to say that vaporizer is connected
 				break;
 			default:
@@ -453,8 +453,9 @@ goddland_16 answer
 void fast_beep()
 {
 	//Serial.println("beep");
-	digitalWrite(7,HIGH);
+	/* digitalWrite(7,HIGH);
 	delay(50);
 	digitalWrite(7,LOW);
 	delay(50);
+	*/
 }
