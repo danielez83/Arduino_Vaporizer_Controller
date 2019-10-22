@@ -20,6 +20,7 @@
  * Relay 2 board  --> DIGITAL D3
  * Relay 3 board  --> DIGITAL D4
  * Relay 4 board  --> DIGITAL D5
+ * Buzzer ---> DIGITAL D7
  * IN1 ULN2003AN board  --> set to DIGITAL D8
  * IN2 ULN2003AN board  --> set to DIGITAL D9
  * IN3 ULN2003AN board  --> set to DIGITAL D10
@@ -109,13 +110,16 @@ bool motor_flag = 0; // flag for activating motor control
 
 // FUNCTIONS ------------------------------------------------
 char convertCharToHex(char ch);
+void fast_beep();
 
 // Software Serial for RS-485 Communication
-SoftwareSerial PIDRS485(12, 13); // rx, tx
+SoftwareSerial PIDRS485(13, 12); // rx, tx
 
 // ARDUINO SETUP
 void setup() {
     // Digital Pins setup
+	// Buzzer on D7
+	pinMode(7, OUTPUT);
 	// Stepper motor **********
     pinMode(STEP_PIN1, OUTPUT);
     pinMode(STEP_PIN2, OUTPUT);
@@ -136,6 +140,10 @@ void setup() {
     // Set relays status ***********************************
     digital_out_status = EEPROM.read(Relay_addr);
 	delay(10);
+	// *** BEGIN BIT INVERSION
+	// Invert bit status because of board relay board specification
+	//digital_out_status = ~digital_out_status;
+	// *** END OF BIT INVERSION
 	// bitshift for accessing D2 to D5
 	digital_out_status = digital_out_status << 2;
 	// clear all output bit except D0 and D1
@@ -145,6 +153,9 @@ void setup() {
 	PORTD &= ~(1 << 5); // RELAY_PIN4 --> D5 --> PORTD5
 	PORTD |= digital_out_status;
 	// *****************************************************
+
+	// Beep ONCE
+	fast_beep();
 }
 
 void loop() {
@@ -174,11 +185,15 @@ void loop() {
 		switch (CMD) {
 			case 'A': // Read Potentiometer ADC ************************************
 			      ADC_val0 = analogRead(A0);
+			      delay(10);
+			      ADC_val0 = analogRead(A0); // Repeat read
 			      Serial.print("Pot ADC Value: ");
 			      Serial.println(ADC_val0);
 				break;
 			case 'L': // Read LM35 temperrature with ADC ************************************
 			      ADC_val1 = analogRead(A1);
+			      delay(10);
+			      ADC_val1 = analogRead(A1); // Repeat read
 			      Serial.print("LM35 ADC Value: ");
 			      Serial.println(ADC_val1);
 				break;
@@ -295,6 +310,7 @@ void loop() {
 				PIDRS485.println(":010508140000DE");
 				break;
 			case 'Q': // Vaporizer Query
+				fast_beep();
 				Serial.println("*"); //Just prompt a "*" to say that vaporizer is connected
 				break;
 			default:
@@ -432,4 +448,13 @@ goddland_16 answer
     break;
   }
   return returnType;
+}
+
+void fast_beep()
+{
+	//Serial.println("beep");
+	digitalWrite(7,HIGH);
+	delay(50);
+	digitalWrite(7,LOW);
+	delay(50);
 }
