@@ -72,11 +72,13 @@
  * Q		Check connection, response is '*'
 */
 
-#include <Arduino.h>
-#include "EEPROM.h"
+//#include <Arduino.h>
+//#include "EEPROM.h"
+#include <EEPROM.h>
 #include "metering_valve.h"
 #include "relay_board.h"
-#include "SoftwareSerial.h" // by Paul Stoffregen (https://github.com/PaulStoffregen/SoftwareSerial)
+//#include "SoftwareSerial.h" // by Paul Stoffregen (https://github.com/PaulStoffregen/SoftwareSerial)
+#include <SoftwareSerial.h>
 
 // CONSTANTS -------------------------------------------------
 
